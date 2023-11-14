@@ -1,11 +1,12 @@
 // aplicação principal do back end
 const express = require("express");
 const cors = require("cors");
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 const uniqueValidator = require("mongoose-unique-validator");
-const bcrypt = require("bcrypt")
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const app = express();
-app.use(express.json())
+app.use(express.json());
 app.use(cors());
 
 const Filme = mongoose.model ("Filme",mongoose.Schema({
@@ -70,6 +71,35 @@ app.post('/signup', async (req, res) => {
         console.log("erro: ", e);
         res.status(409).end();
     }
+})
+app.post('/login', async (req, res) => {
+    //trazer para o contexto o que foi digitado no front end
+    const login = req.body.login;
+    const senha = req.body.senha; // isso equivale a ir no corpo da requisição e pega=egar a senha
+    const user = await Usuario.findOne({login: login}); // verifca se o login digitado na variável login eixste
+    if (!user) {
+        // !user = se o usuário não existir
+        return res.status(401).json({mensagem: "usuário não cadastrado"}); //se ele passar pelo if, qeur dizer que ele existe, agora tenho que ver se a senha é a mesma
+    }
+        //trazer para o contexto
+        //const senhaValida = compare(senha, user.senha) //versão errada, compara a senha no banco, com a senha que o user digitou, não dá certo por que a senha no banco está criptografada
+
+    const senhaValida = await bcrypt.compare(senha, user.senha) // dessa forma vai comprar a senha encryputada
+    if (!senhaValida) {
+        // ! = not, se a senha foi inválida
+        return res.status(401).json({mensagem: "senha incorreta, acesso negado, tente novamente"});
+    }
+    
+    const token = jwt.sign(
+        {login: login},
+        "minha_chave",
+        {expiresIn: "1h"} // objetos json estão entre {}
+    )
+
+    //código para login
+    //res.end();
+
+    res.status(200).json({token: token});
     
 })
 
